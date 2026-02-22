@@ -72,3 +72,8 @@ export const commentaryRelations = relations(commentary, ({ one }) => ({
     references: [matches.id],
   }),
 }));
+
+export type Match = typeof matches.$inferSelect;
+export type Commentary = typeof commentary.$inferSelect;
+export type NewMatch = typeof matches.$inferInsert;
+export type NewCommentary = typeof commentary.$inferInsert;

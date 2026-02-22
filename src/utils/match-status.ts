@@ -1,12 +1,16 @@
+import { Match } from "../db/schema";
 import { MATCH_STATUS } from "../validation/matches";
 
 export type MatchStatus = (typeof MATCH_STATUS)[keyof typeof MATCH_STATUS];
 
 export function getMatchStatus(
-  startTime: string,
-  endTime: string,
+  startTime: string | Date | null,
+  endTime: string | Date | null,
   now = new Date(),
 ): MatchStatus {
+  if (!startTime || !endTime) {
+    return MATCH_STATUS.SCHEDULED;
+  }
   const start = new Date(startTime);
   const end = new Date(endTime);
 
@@ -26,7 +30,7 @@ export function getMatchStatus(
 }
 
 export async function syncMatchStatus(
-  match: { startTime: string; endTime: string; status?: MatchStatus },
+  match: Match,
   updateStatus: (status: MatchStatus) => Promise<void> | void,
 ): Promise<MatchStatus | undefined> {
   const nextStatus = getMatchStatus(match.startTime, match.endTime);

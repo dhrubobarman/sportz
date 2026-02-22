@@ -7,16 +7,15 @@ import { db } from "../db/db";
 import { matches } from "../db/schema";
 import { getMatchStatus } from "../utils/match-status";
 import { desc } from "drizzle-orm";
+import { validator } from "../middleware/validator";
 
 const matchRouter = new Hono();
 const MAX_LIMIT = 100;
 
-matchRouter.get("/", async (c) => {
-  const parsed = listMatchesQuerySchema.safeParse(c.req.query());
-  if (!parsed.success) {
-    return c.json({ error: "Invalid query", details: parsed.error }, 400);
-  }
-  const limit = Math.min(parsed.data.limit ?? 50, MAX_LIMIT);
+matchRouter.get("/", validator("query", listMatchesQuerySchema), async (c) => {
+  const parsed = c.var.validatedQuery;
+
+  const limit = Math.min(parsed.limit ?? 50, MAX_LIMIT);
 
   try {
     const data = await db
@@ -30,15 +29,10 @@ matchRouter.get("/", async (c) => {
   }
 });
 
-matchRouter.post("/", async (c) => {
-  const body = await c.req.json();
-  const parsed = createMatchSchema.safeParse(body);
-  if (!parsed.success) {
-    return c.json({ error: "Invalid payload", details: parsed.error }, 400);
-  }
-  const {
-    data: { startTime, endTime, homeScore, awayScore, ...rest },
-  } = parsed;
+matchRouter.post("/", validator("json", createMatchSchema), async (c) => {
+  const parsed = c.var.validatedJson;
+
+  const { startTime, endTime, homeScore, awayScore, ...rest } = parsed;
 
   try {
     const [event] = await db
@@ -52,6 +46,10 @@ matchRouter.post("/", async (c) => {
         status: getMatchStatus(startTime, endTime),
       })
       .returning();
+
+    if (c.var.brodcastMatchCreated) {
+      c.var.brodcastMatchCreated(event);
+    }
 
     return c.json({ message: "Match created", data: event }, 200);
   } catch (error) {
