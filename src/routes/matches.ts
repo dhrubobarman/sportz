@@ -42,6 +42,7 @@ matchRouter.post("/", async (c) => {
       400,
     );
   }
+
   const {
     data: { startTime, endTime, homeScore, awayScore, ...rest },
   } = parsed;
