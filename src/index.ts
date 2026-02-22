@@ -1,12 +1,13 @@
 import { Hono } from "hono";
+import matches from "./routes/matches";
 
 const app = new Hono();
 
 app.get("/", (c) => {
-  return c.json({ h: "hi there" });
+  return c.json({ h: "Welcome to Sportz!" });
 });
 
-console.log(process.env.FOO);
+app.route("/matches", matches);
 
 export default {
   port: 8000,
