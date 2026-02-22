@@ -2,6 +2,10 @@ import { WebSocket, WebSocketServer } from "ws";
 import { Match } from "../db/schema";
 import { Server } from "../types";
 
+interface ExtWebSocket extends WebSocket {
+  isAlive: boolean;
+}
+
 function sendJson<D>(socket: WebSocket, payload: D) {
   if (socket.readyState !== WebSocket.OPEN) return;
   socket.send(JSON.stringify(payload));
@@ -20,9 +24,29 @@ export function attachWebsockerServer(server: Server) {
     path: "/ws",
     maxPayload: 1024 * 1024,
   });
-  wss.on("connection", (socket) => {
+  wss.on("connection", (socket: ExtWebSocket) => {
+    socket.isAlive = true;
+    socket.on("pong", () => {
+      socket.isAlive = true;
+    });
     sendJson(socket, { type: "welcome" });
     socket.on("error", console.log);
+  });
+
+  const interval = setInterval(() => {
+    wss.clients.forEach((socket) => {
+      const extSocket = socket as ExtWebSocket;
+      if (!extSocket.isAlive) {
+        return socket.terminate();
+      }
+      extSocket.isAlive = false;
+      extSocket.ping();
+    });
+  }, 30000);
+
+  server.on("close", () => {
+    clearInterval(interval);
+    wss.close();
   });
 
   function brodcastMatchCreated(match: Match) {
